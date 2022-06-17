@@ -1,17 +1,8 @@
 'use strict';
 
-const form = document.querySelector('.form');
-const containerWorkouts = document.querySelector('.workouts');
-const inputType = document.querySelector('.form__input--type');
-const inputDistance = document.querySelector('.form__input--distance');
-const inputDuration = document.querySelector('.form__input--duration');
-const inputCadence = document.querySelector('.form__input--cadence');
-const inputElevation = document.querySelector('.form__input--elevation');
-const removeBtn = document.querySelector('.remove-workouts');
-
 class Workout {
   date = new Date();
-  id = (Date.now() + '').slice(-10);
+  id = String(Date.now()).slice(-10);
   constructor(coords, distance, duration) {
     this.coords = coords;
     this.distance = distance;
@@ -25,6 +16,7 @@ class Workout {
     } ${this.date.getDate()}`;
   }
 }
+
 
 class Running extends Workout {
   type = 'running';
@@ -40,6 +32,7 @@ class Running extends Workout {
   }
 }
 
+
 class Cycling extends Workout {
   type = 'cycling';
   constructor(coords, distance, duration, elevation) {
@@ -54,18 +47,29 @@ class Cycling extends Workout {
   }
 }
 
+
 class App {
   #map;
   #mapZoom = 14;
   #mapEvent;
   #workouts = [];
+  form = document.querySelector('.form')
+  inputType = document.querySelector('.form__input--type');
+  inputDistance = document.querySelector('.form__input--distance');
+  inputDuration = document.querySelector('.form__input--duration');
+  inputCadence = document.querySelector('.form__input--cadence');
+  inputElevation = document.querySelector('.form__input--elevation');
 
   constructor() {
     this._getPosition();
     this._getLocalStorage();
-    form.addEventListener('submit', this._newWorkout.bind(this));
-    inputType.addEventListener('change', this._toggleElevationField);
-    containerWorkouts.addEventListener('click', this._moveToWorkout.bind(this));
+    this.form.addEventListener('submit', this._newWorkout.bind(this));
+    this.inputType.addEventListener('change', this._toggleElevationField.bind(this));
+    document.querySelector('.workouts').addEventListener('click', this._moveToWorkout.bind(this));
+    document.querySelector('.remove-workouts').addEventListener('click', () => {
+      localStorage.removeItem('workouts');
+      location.reload();
+    });
   }
 
   _getPosition() {
@@ -105,31 +109,32 @@ class App {
 
   _showForm(mapE) {
     this.#mapEvent = mapE;
-    form.classList.remove('hidden');
-    inputDistance.focus();
+    this.form.classList.remove('hidden');
+    this.inputDistance.focus();
   }
 
   _toggleElevationField() {
-    inputElevation.closest('.form__row').classList.toggle('form__row--hidden');
-    inputCadence.closest('.form__row').classList.toggle('form__row--hidden');
-    inputDistance.focus();
+    this.inputElevation.closest('.form__row').classList.toggle('form__row--hidden');
+    this.inputCadence.closest('.form__row').classList.toggle('form__row--hidden');
+    this.inputDistance.focus();
   }
 
   _newWorkout(e) {
-    e.preventDefault();
-    const type = inputType.value;
-    const distance = +inputDistance.value;
-    const duration = +inputDuration.value;
+    const type = this.inputType.value;
+    const distance = Number(this.inputDistance.value);
+    const duration = Number(this.inputDuration.value);
     const { lat, lng } = this.#mapEvent.latlng;
     console.log(lat);
     let workout;
+    
+    e.preventDefault();
 
     const validInputs = (...inputs) =>
       inputs.every(input => Number.isFinite(input));
     const allPositive = (...inputs) => inputs.every(input => input > 0);
 
     if (type === 'running') {
-      const cadence = +inputCadence.value;
+      const cadence = Number(this.inputCadence.value);
       if (
         !validInputs(distance, duration, cadence) ||
         !allPositive(distance, duration, cadence)
@@ -138,7 +143,7 @@ class App {
       workout = new Running([lat, lng], distance, duration, cadence);
     }
     if (type === 'cycling') {
-      const elevation = +inputElevation.value;
+      const elevation = Number(this.inputElevation.value);
       if (
         !validInputs(distance, duration, elevation) ||
         !allPositive(distance, duration)
@@ -154,14 +159,14 @@ class App {
   }
 
   _hideNewWorkoutForm() {
-    inputDistance.value =
-      inputDuration.value =
-      inputCadence.value =
-      inputElevation.value =
-        '';
-    form.style.display = 'none';
-    form.classList.add('hidden');
-    setTimeout(() => (form.style.display = 'grid'), 1000);
+    this.inputDistance.value =
+    this.inputDuration.value =
+    this.inputCadence.value =
+    this.inputElevation.value = '';
+
+    this.form.style.display = 'none';
+    this.form.classList.add('hidden');
+    setTimeout(() => (this.form.style.display = 'grid'), 1000);
   }
 
   _renderWorkout(workout) {
@@ -212,7 +217,7 @@ class App {
     </li>
     `;
 
-    form.insertAdjacentHTML('afterend', html);
+    this.form.insertAdjacentHTML('afterend', html);
   }
 
   _renderWorkoutMarker(workout) {
@@ -237,8 +242,8 @@ class App {
     localStorage.setItem('workouts', JSON.stringify(this.#workouts));
   }
 
-  _moveToWorkout(e) {
-    const workoutEl = e.target.closest('.workout');
+  _moveToWorkout(event) {
+    const workoutEl = event.target.closest('.workout');
     if (!workoutEl) return;
     const workout = this.#workouts.find(
       workout => workout.id === workoutEl.dataset.id
@@ -250,11 +255,6 @@ class App {
       },
     });
   }
-
 }
-const app = new App();
 
-removeBtn.addEventListener('click', () => {
-  localStorage.removeItem('workouts');
-  location.reload();
-});
+const app = new App();
